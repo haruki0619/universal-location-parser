@@ -1,0 +1,75 @@
+{
+  "semanticSegments": [
+    {
+      "startTime": "2025-05-01T09:00:00.000+09:00",
+      "endTime": "2025-05-01T10:30:00.000+09:00",
+      "visit": {
+        "probability": 0.95,
+        "topCandidate": {
+          "placeId": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+          "semanticType": "HOME",
+          "placeLocation": {
+            "latLng": "35.681236, 139.767125"
+          }
+        }
+      }
+    },
+    {
+      "startTime": "2025-05-01T10:30:00.000+09:00",
+      "endTime": "2025-05-01T11:00:00.000+09:00",
+      "activity": {
+        "distanceMeters": 1500,
+        "topCandidate": {
+          "type": "WALKING",
+          "probability": 0.87
+        },
+        "start": {
+          "latLng": "35.681236, 139.767125"
+        },
+        "end": {
+          "latLng": "35.689488, 139.700345"
+        }
+      }
+    },
+    {
+      "startTime": "2025-05-01T11:00:00.000+09:00",
+      "endTime": "2025-05-01T13:00:00.000+09:00",
+      "visit": {
+        "probability": 0.92,
+        "topCandidate": {
+          "placeId": "ChIJN1t_tDeuEmsRUsoyG83frY5",
+          "semanticType": "RESTAURANT",
+          "placeLocation": {
+            "latLng": "35.689488, 139.700345"
+          }
+        }
+      }
+    },
+    {
+      "startTime": "2025-05-01T13:00:00.000+09:00",
+      "endTime": "2025-05-01T13:30:00.000+09:00",
+      "timelinePath": [
+        {
+          "time": "2025-05-01T13:05:00.000+09:00",
+          "point": "35.689900, 139.701234"
+        },
+        {
+          "time": "2025-05-01T13:10:00.000+09:00",
+          "point": "35.690123, 139.702345"
+        },
+        {
+          "time": "2025-05-01T13:15:00.000+09:00",
+          "point": "35.690789, 139.703456"
+        },
+        {
+          "time": "2025-05-01T13:20:00.000+09:00",
+          "point": "35.691234, 139.704567"
+        },
+        {
+          "time": "2025-05-01T13:25:00.000+09:00",
+          "point": "35.692345, 139.705678"
+        }
+      ]
+    }
+  ]
+}

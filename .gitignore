@@ -16,6 +16,9 @@ venv/*
 data/*
 !data/.gitkeep
 
+# Sample data should be tracked
+!sample_data/
+
 # OS
 .DS_Store
 Thumbs.db
