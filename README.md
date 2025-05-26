@@ -232,4 +232,4 @@ CSV_COLUMNS = [
 
 ## 貢献方法
 
-このプロジェクトへの貢献を歓迎します！貢献を始めるには、[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。また、すべての貢献者は[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)を適切に遵守することが期待されます。
+このプロジェクトへの貢献を歓迎します！貢献を始めるには、[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。
