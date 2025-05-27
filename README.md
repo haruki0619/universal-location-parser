@@ -1,49 +1,65 @@
-# Universal Timeline Parser
+# Google Timeline & GPX Parser
 
-複数のGISデータソースからタイムラインデータを統合する汎用的なパーサーです。
+Google TimelineデータとGPXファイルを統合処理する包括的なパーサーです。
+
+## 🌟 新機能（2025年5月更新）
+
+### 🏔️ GPX対応追加
+- **YAMAP**: 登山・ハイキングデータ
+- **Garmin**: 各種スポーツアクティビティ
+- **汎用GPX**: その他のGPSアプリからのエクスポート
+
+### 🤖 インテリジェント分類
+- ファイル名パターンによる自動判定
+- 速度・標高パターンによるアクティビティ分類
+- カスタマイズ可能な分類しきい値
+
+### 📊 統合分析
+- Timeline + GPX データの統一CSV出力
+- データタイプ別統計
+- 時系列での完全統合
 
 ## 🚨 貢献者を求めています！
 
 このプロジェクトはオープンソースで開発されており、新しいデータ形式のサポート、機能拡張、バグ修正などを手伝ってくださる貢献者を探しています。特に以下の分野での貢献を歓迎します：
 
-- GPX、KMLなどの新しいデータ形式のサポート
+- 新しいGPSデバイス・アプリの対応
 - データの視覚化機能
-- データ変換のパフォーマンス改善
-- ドキュメントやチュートリアルの充実
+- アクティビティ分類精度の改善
+- 多言語対応
 
-貢献方法については、[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。初めての貢献者向けに「Good First Issue」タグの付いたIssueも用意しています。
+貢献方法については、[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。
 
 ## プロジェクトの目標
 
 このプロジェクトは、あらゆるGISデータ（タイムラインデータ、GPSログなど）を単一の統合テーブルに保管することを目指しています。これは、今後 [Pathfinder](https://pathfinder.dk-core.com/) の開発に役立てるための、汎用的かつ包括的なDBの作成を目的としています。
 
-現在は、AndroidおよびiPhoneの端末に保存されているGoogle Timelineデータのみに対応していますが、今後はGPX形式やその他の位置情報データ形式にも拡張していく予定です。
-
-## 構造
+## 📁 プロジェクト構造
 
 ```
 timeline/
-├── main.py                 # メイン実行スクリプト
-├── config.py               # 設定ファイル
-├── modules/                # 機能別モジュール
+├── main.py                    # 従来のJSON専用処理
+├── main_unified.py           # 新しい統合処理（JSON + GPX）⭐
+├── config.py                 # 設定ファイル（GPX対応拡張済み）
+├── test_config.py            # 設定テストスクリプト ⭐
+├── modules/                  # 機能別モジュール
 │   ├── __init__.py
-│   ├── file_handler.py     # ファイル操作
-│   ├── json_parser.py      # JSON解析
-│   ├── data_converter.py   # データ変換
-│   └── csv_exporter.py     # CSV出力
-├── data/                   # 入力フォルダ（Git管理外）
-└── timeline_output.csv     # 出力ファイル
+│   ├── file_handler.py       # ファイル操作（JSON + GPX対応）
+│   ├── json_parser.py        # Google Timeline解析
+│   ├── gpx_parser.py         # GPX解析 ⭐ (新規追加)
+│   ├── data_converter.py     # データ変換（GPX拡張対応）
+│   └── csv_exporter.py       # CSV出力・統計
+├── data/                     # 入力フォルダ（Git管理外）
+│   ├── *.json               # Google Timeline JSONファイル
+│   └── *.gpx                # GPXファイル ⭐
+├── sample_data/              # サンプルデータ
+├── timeline_output.csv       # 統合出力ファイル
+└── README_EXTENDED.md        # 詳細ドキュメント ⭐
 ```
 
-## 使用方法
+## 🚀 使用方法
 
-### 1. ファイル配置
-```bash
-# Google TimelineのJSONファイルをdataディレクトリに配置
-cp your_timeline.json data/
-```
-
-### 2. 実行
+### 基本セットアップ
 ```bash
 # 仮想環境を有効化（初回のみ）
 python -m venv venv
@@ -52,184 +68,350 @@ venv\Scripts\activate     # Windowsの場合
 
 # 依存パッケージのインストール（初回のみ）
 pip install -r requirements.txt
+```
 
-# 実行
+### データファイル配置
+```bash
+# Google TimelineのJSONファイル
+cp your_timeline.json data/
+
+# GPXファイル（YAMAP、Garmin等）
+cp yamap_activity.gpx data/
+cp garmin_activity.gpx data/
+```
+
+### 実行方法
+
+#### 🆕 推奨: 統合処理
+```bash
+# JSON + GPX 両方を処理
+python main_unified.py
+```
+
+#### 従来: JSON専用処理
+```bash
+# JSONファイルのみを処理
 python main.py
 ```
 
-### 3. 結果確認
+### 結果確認
 - `timeline_output.csv` が生成されます
 - 時間順にソートされた統合データが出力されます
 
-### サンプルデータの使用
+### 設定テスト
+```bash
+# 設定ファイルの動作確認
+python test_config.py
+```
 
-開発やテストのためのサンプルデータが`sample_data`ディレクトリに用意されています：
+## 📋 サポートされているデータ形式
+
+### ✅ 現在対応済み
+
+#### Google Timeline
+- **Android形式**: `semanticSegments` 構造のJSONファイル
+- **iPhone形式**: `startTime` 構造のJSONファイル
+
+#### GPX形式 ⭐ (新規対応)
+- **YAMAP**: 登山・ハイキングデータ（`yamap_*.gpx`）
+- **Garmin**: 各種スポーツアクティビティ（`activity_*.gpx`）
+- **汎用GPX**: その他のGPSアプリからのエクスポート
+
+### 🔮 今後対応予定
+- KML/KMZ（Google Earth形式）
+- Strava API連携
+- Apple Health GPS データ
+- その他のGPSトラッカーアプリ
+
+## 🧩 各モジュールの機能
+
+### config.py ⭐ (GPX対応拡張)
+- **基本設定**: ディレクトリパス、ファイル名、ユーザー設定
+- **CSV出力設定**: 統合カラム定義（Timeline + GPX）
+- **GPX処理設定**: アクティビティ分類しきい値、データソース設定
+- **タイムゾーン設定**: 入力・出力タイムゾーン
+
+### file_handler.py ⭐ (GPX対応拡張)
+- JSONファイル検索・読み込み（既存）
+- **GPXファイル検索・読み込み** (新規)
+- **統合ファイル検索** (新規)
+- 複数エンコーディング対応
+- ファイル形式検証
+
+### gpx_parser.py ⭐ (新規追加)
+- **XML解析**: GPXファイルの構造解析
+- **データ抽出**: トラックポイント、ウェイポイント、メタデータ
+- **速度計算**: 連続ポイント間の移動速度算出
+- **アクティビティ判定**: ファイル名・内容・パターンによる自動分類
+- **セマンティック分類**: 用途別カテゴリ割り当て
+
+### json_parser.py (既存維持)
+- Android/iPhone形式の自動判別
+- visit/activity/timelinePathの抽出
+- 座標・時刻データの抽出
+
+### data_converter.py ⭐ (GPX拡張対応)
+- タイムスタンプのUTC統一
+- 数値データの正規化（Timeline + GPX）
+- **GPX特有フィールド**の処理
+- DataFrame結合・時間順ソート
+- **統合統計情報**生成
+
+### csv_exporter.py ⭐ (GPX対応拡張)
+- **統合CSVファイル出力**（Timeline + GPX）
+- データ検証・品質チェック
+- **詳細な結果サマリー**（データタイプ別・ソース別統計）
+
+## 📊 統合データ構造
+
+### 共通フィールド
+```csv
+type,start_time,end_time,point_time,latitude,longitude,activity_type,username
+```
+
+### Timeline特有フィールド
+```csv
+visit_probability,visit_placeId,visit_semanticType,activity_distanceMeters,activity_probability
+```
+
+### GPX特有フィールド ⭐
+```csv
+_gpx_data_source,_gpx_track_name,_gpx_elevation,_gpx_speed,_gpx_point_sequence
+```
+
+## 🎯 アクティビティ自動分類
+
+### 分類ロジック
+1. **ファイル名判定**（最優先）
+   - `yamap_*.gpx` → hiking
+   - `*run*.gpx` → running
+   - `*bike*.gpx` → cycling
+
+2. **トラック名判定**
+   - 「○○山」「○○岳」 → hiking
+   - 「ランニング」「run」 → running
+
+3. **移動パターン判定**（config.py設定値使用）
+   - 速度 < 4km/h → walking
+   - 速度 < 6km/h + 標高差 > 100m → hiking
+   - 6-15km/h → running
+   - 15-40km/h → cycling
+
+### カスタマイズ可能な設定
+```python
+# config.py で調整可能
+GPX_CONFIG = {
+    "speed_thresholds": {
+        "walking_max": 4,
+        "hiking_max": 6,
+        "running_max": 15,
+        "cycling_max": 40
+    },
+    "elevation_thresholds": {
+        "hiking_min_gain": 100
+    }
+}
+```
+
+## 🔍 データ分析例
+
+### Python での分析
+```python
+import pandas as pd
+
+# 統合データの読み込み
+df = pd.read_csv('timeline_output.csv')
+
+# Google Timelineデータのみ
+timeline_data = df[df['type'].str.contains('visit|activity')]
+
+# GPXデータのみ
+gpx_data = df[df['type'].str.startswith('gpx')]
+
+# 登山データの分析
+hiking_data = df[df['activity_type'] == 'hiking']
+print(f"登山回数: {hiking_data['_gpx_track_name'].nunique()}回")
+
+# 月別アクティビティ統計
+monthly_stats = df.groupby([
+    df['start_time'].dt.to_period('M'), 
+    'activity_type'
+]).size()
+```
+
+## 🛠️ 新しいGPSデバイス対応方法
+
+### 1. データソース検出の追加
+```python
+# modules/gpx_parser.py の detect_data_source() を拡張
+def detect_data_source(filename):
+    filename_lower = filename.lower()
+    
+    if 'yamap' in filename_lower:
+        return 'yamap'
+    elif 'strava' in filename_lower:  # 新規追加
+        return 'strava'
+    elif 'suunto' in filename_lower:  # 新規追加
+        return 'suunto'
+    # ... 他のデバイス追加
+```
+
+### 2. 設定の追加
+```python
+# config.py の GPX_CONFIG に追加
+"data_source_defaults": {
+    "strava": {
+        "default_activity": "unknown",
+        "semantic_type": "Sports"
+    },
+    "suunto": {
+        "default_activity": "unknown", 
+        "semantic_type": "Sports"
+    }
+}
+```
+
+## 📈 処理結果例
 
 ```bash
-# サンプルデータをdataディレクトリにコピー
-cp sample_data/sample_android.json data/
-cp sample_data/sample_iphone.json data/
+🌐 Google Timeline & GPX Parser
+==================================================
 
-# パーサーを実行
-python main.py
+📁 ファイルを検索中...
+📊 発見ファイル: JSON 2個, GPX 3個
+
+🔄 JSON処理: 2個のファイルを処理中...
+✅ JSON処理完了: 2/2個のファイルを処理
+
+🏔️ GPX処理: 3個のファイルを処理中...
+✅ GPX処理完了: 3/3個のファイルを処理
+
+🔗 5個のファイルからデータを統合中...
+⏰ 時間順ソート中...
+💾 CSV出力中...
+
+📈 データタイプ別統計:
+   - visit: 234件
+   - gpx_trackpoint: 5,456件
+   - activity_start: 123件
+
+🏔️ GPXデータソース別統計:
+   - yamap: 2,456件
+   - garmin: 1,834件
+
+⏱️ 処理時間: 12.34秒
+🎉 統合処理完了!
 ```
 
-## サポートされているデータ形式
+## 🧪 サンプルデータの使用
 
-現在、以下のデータ形式をサポートしています：
+### 提供サンプル
+```bash
+sample_data/
+├── sample_android.json      # Android Timeline
+├── sample_iphone.json       # iPhone Timeline
+└── (GPXサンプルは data/ に配置済み)
 
-1. **Google Timeline（Android）** - AndroidデバイスからエクスポートされたJSON形式
-2. **Google Timeline（iPhone）** - iPhoneデバイスからエクスポートされたJSON形式
+# サンプルを使った実行
+cp sample_data/*.json data/
+python main_unified.py
+```
 
-今後対応予定の形式：
-- GPX（GPS Exchange Format）
-- KML/KMZ（Google Earth形式）
-- その他のGPSトラッカーアプリのデータ形式
+### リアルデータ使用
+```bash
+# 実際のデータディレクトリ
+data/
+├── yamap_2025-01-18_07_17.gpx      # YAMAP登山データ
+├── activity_12303576279.gpx        # Garminアクティビティ
+├── timeline_android.json           # Android Timeline
+└── timeline_iphone.json            # iPhone Timeline
+```
 
-## 各モジュールの役割
+## 🔧 設定カスタマイズ
 
-### config.py
-- ディレクトリパス設定
-- 出力ファイル名設定
-- CSVカラム定義
-- デバッグモード設定
-
-### file_handler.py
-- 様々な形式のファイルの検索と読み込み
-- ファイル読み込み（複数エンコーディング対応）
-- エラーハンドリング
-- ユーザー名生成
-
-### json_parser.py
-- Android/iPhone形式の自動判別
-- データ構造の解析
-- visit/activity/timelinePathの抽出
-- 座標データの抽出
-
-### data_converter.py
-- 時間変換（現地時間→UTC）
-- 数値データの正規化
-- DataFrameの結合
-- 時間順ソート
-
-### csv_exporter.py
-- CSVファイル出力
-- データ検証
-- 結果サマリー表示
-
-## 特徴
-
-### モジュール設計
-- **単一責任原則**: 各モジュールが明確な役割を持ち、独立して機能
-- **拡張性**: 新しいデータ形式の追加が容易
-- **再利用性**: 各モジュールを他のプロジェクトで再利用可能
-
-### 柔軟な設定
-- `config.py`で一元管理
-- カラム定義の集中管理
-- デバッグモード切り替え
-
-### 強力なエラーハンドリング
-- 複数エンコーディング対応
-- 無効なファイルの検出
-- 詳細なエラーメッセージ
-
-## 新しいデータ形式の追加方法
-
-このパーサーは、簡単に新しいデータ形式に対応できるように設計されています：
-
-1. `config.py`の`SUPPORTED_EXTENSIONS`に新しい拡張子を追加
-2. `json_parser.py`（または新しいパーサーモジュール）に解析関数を追加
-3. `detect_format()`関数を拡張して新しい形式を検出
-4. 新しい形式のデータを共通形式に変換する関数を実装
-
-例えば、GPXファイル形式をサポートするには：
-
+### ユーザー名設定
 ```python
 # config.py
-SUPPORTED_EXTENSIONS = [".json", ".gpx"]
-
-# modules/gpx_parser.py（新規作成）
-def parse_gpx_data(data, username):
-    records = []
-    # GPXデータ解析ロジックを実装
-    return records
-
-# json_parser.py を拡張
-def detect_format(data):
-    if isinstance(data, list) and len(data) > 0 and 'startTime' in data[0]:
-        return "iphone"
-    elif isinstance(data, dict) and 'semanticSegments' in data:
-        return "android"
-    elif isinstance(data, str) and '<?xml' in data and '<gpx' in data:
-        return "gpx"
-    else:
-        raise ValueError("不明なデータ形式")
-
-def parse_json_data(data, username):
-    try:
-        data_format = detect_format(data)
-        
-        if data_format == "android":
-            return parse_android_data(data, username)
-        elif data_format == "iphone":
-            return parse_iphone_data(data, username)
-        elif data_format == "gpx":
-            from modules.gpx_parser import parse_gpx_data
-            return parse_gpx_data(data, username)
-        else:
-            raise ValueError(f"未対応の形式: {data_format}")
-    except Exception as e:
-        # エラーハンドリング
-        return []
+USERNAME = "your_username"  # デフォルトユーザー名変更
 ```
 
-## カラム定義
-
-出力CSVファイルのカラムは`config.py`の`CSV_COLUMNS`で定義されています：
-
+### アクティビティ分類調整
 ```python
+# config.py - 登山判定を緩くする例
+GPX_CONFIG = {
+    "speed_thresholds": {
+        "hiking_max": 8,  # 8km/hまで登山とする
+    },
+    "elevation_thresholds": {
+        "hiking_min_gain": 50  # 50m以上の標高差で登山
+    }
+}
+```
+
+### CSV出力カラム調整
+```python
+# config.py - 不要なカラムを除外
 CSV_COLUMNS = [
-    "type",
-    "start_time", 
-    "end_time",
-    "point_time",
-    "latitude",
-    "longitude",
-    "visit_probability",
-    "visit_placeId", 
-    "visit_semanticType",
-    "activity_distanceMeters",
-    "activity_type", 
-    "activity_probability",
-    "username"
+    "type", "start_time", "latitude", "longitude", 
+    "activity_type", "_gpx_elevation"  # 必要な列のみ
 ]
 ```
 
-新しいカラムを追加または不要なカラムを削除する場合は、このリストを編集するだけです。
+## 🌟 特徴
 
-## 将来の拡張計画
+### 🔄 統合アーキテクチャ
+- **既存機能保護**: JSON処理は従来通り動作
+- **新機能追加**: GPX処理をシームレスに統合
+- **下位互換性**: 既存のワークフローに影響なし
 
-1. **新しいデータ形式対応**
-   - GPX、KML形式のサポート
-   - Strava、Garminなどのサービスからのデータインポート
-   
-2. **データ可視化**
-   - 基本的な地図ビューアーの統合
-   - 時間ベースのアニメーション
+### 🤖 インテリジェント処理
+- **自動形式判別**: JSON/GPXを自動認識
+- **アクティビティ分類**: ファイル名・内容・パターンで自動判定
+- **データ品質管理**: 異常値検出・除外
 
-3. **データエンリッチメント**
-   - 天気データとの統合
-   - 逆ジオコーディング（座標→住所/場所名）
+### ⚙️ 柔軟な設定管理
+- **一元設定**: `config.py`で全設定を管理
+- **カスタマイズ可能**: しきい値・分類ルールを調整可能
+- **拡張性**: 新しいデバイス・ルールを簡単追加
 
-4. **分析機能**
-   - 移動パターンの抽出
-   - 統計レポート生成
+### 🛡️ 強力なエラーハンドリング
+- **複数エンコーディング対応**: UTF-8、Shift_JIS等
+- **段階的検証**: ファイル→形式→内容の多層チェック
+- **詳細ログ**: デバッグモードでの詳細情報表示
 
-## ライセンス
+## 📚 ドキュメント
+
+- **[README_EXTENDED.md](README_EXTENDED.md)**: より詳細な技術仕様・データ分析例
+- **[CONTRIBUTING.md](CONTRIBUTING.md)**: 貢献方法・開発ガイドライン
+
+## 🔮 将来の拡張計画
+
+### Phase 1: データソース拡張
+- Strava API連携
+- Apple Health GPS データ
+- Suunto、Polar等のデバイス対応
+
+### Phase 2: 高度な分析機能
+- 移動パターン分析
+- 健康データとの統合
+- 機械学習による行動予測
+
+### Phase 3: 可視化・インターフェース
+- Webベースのダッシュボード
+- インタラクティブマップ
+- リアルタイム分析
+
+## 📄 ライセンス
 
 このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
 
-## 貢献方法
+## 🤝 貢献方法
 
-このプロジェクトへの貢献を歓迎します！貢献を始めるには、[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。
+プロジェクトへの貢献を歓迎します！
+
+1. **Issue報告**: バグや機能要望
+2. **Pull Request**: コード改善・新機能追加
+3. **ドキュメント**: 使用方法・チュートリアルの改善
+4. **テスト**: 新しいデバイス・データ形式でのテスト
+
+詳細は[CONTRIBUTING.md](CONTRIBUTING.md)を参照してください。

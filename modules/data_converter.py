@@ -65,12 +65,20 @@ def convert_records_to_dataframe(records: List[Dict]) -> pd.DataFrame:
         if col in df.columns:
             df[col] = df[col].apply(convert_timestamp_to_utc)
     
-    # 数値カラムの変換
+    # 数値カラムの変換（Timeline用）
     numeric_columns = [
         'latitude', 'longitude', 'activity_distanceMeters', 
         'visit_probability', 'activity_probability'
     ]
-    for col in numeric_columns:
+    
+    # GPX用の追加数値カラム
+    gpx_numeric_columns = [
+        '_gpx_elevation', '_gpx_speed', '_gpx_point_sequence'
+    ]
+    
+    all_numeric_columns = numeric_columns + gpx_numeric_columns
+    
+    for col in all_numeric_columns:
         if col in df.columns:
             df[col] = df[col].apply(normalize_numeric_value)
     
@@ -143,5 +151,18 @@ def get_dataframe_summary(df: pd.DataFrame) -> Dict:
         },
         "location_records": len(df.dropna(subset=['latitude', 'longitude'])) if all(col in df.columns for col in ['latitude', 'longitude']) else 0
     }
+    
+    # GPXデータの特別統計
+    gpx_data = df[df['type'].str.startswith('gpx', na=False)] if 'type' in df.columns else pd.DataFrame()
+    if not gpx_data.empty:
+        summary["gpx_stats"] = {
+            "total_gpx_records": len(gpx_data),
+            "gpx_data_sources": gpx_data['_gpx_data_source'].value_counts().to_dict() if '_gpx_data_source' in gpx_data.columns else {},
+            "gpx_tracks": gpx_data['_gpx_track_name'].nunique() if '_gpx_track_name' in gpx_data.columns else 0,
+            "elevation_range": {
+                "min": gpx_data['_gpx_elevation'].min() if '_gpx_elevation' in gpx_data.columns else None,
+                "max": gpx_data['_gpx_elevation'].max() if '_gpx_elevation' in gpx_data.columns else None
+            } if '_gpx_elevation' in gpx_data.columns else None
+        }
     
     return summary

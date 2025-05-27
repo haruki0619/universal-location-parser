@@ -29,6 +29,35 @@ def find_json_files() -> List[str]:
     return json_files
 
 
+def find_gpx_files() -> List[str]:
+    """データディレクトリ内のGPXファイルを検索する"""
+    if not os.path.exists(DATA_DIR):
+        print(f"❌ データディレクトリが存在しません: {DATA_DIR}")
+        return []
+    
+    gpx_files = []
+    gpx_extensions = ['.gpx', '.GPX']
+    
+    for ext in gpx_extensions:
+        pattern = os.path.join(DATA_DIR, f"*{ext}")
+        gpx_files.extend(glob.glob(pattern))
+    
+    if DEBUG:
+        print(f"🏔️ {len(gpx_files)}個のGPXファイルを発見:")
+        for file in gpx_files:
+            print(f"   - {os.path.basename(file)}")
+    
+    return gpx_files
+
+
+def find_all_files() -> Dict[str, List[str]]:
+    """すべてのサポートされているファイルを検索する"""
+    return {
+        'json': find_json_files(),
+        'gpx': find_gpx_files()
+    }
+
+
 def load_json_file(filepath: str) -> Union[Dict, List, None]:
     """ファイルを安全に読み込む"""
     if DEBUG:
@@ -122,3 +151,16 @@ def validate_json_data(data: Union[Dict, List]) -> bool:
         return True  # iPhone形式
     
     return False
+
+
+def validate_gpx_file(filepath: str) -> bool:
+    """GPXファイルの基本的な検証"""
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            content = f.read(1000)  # 最初の1000文字をチェック
+        
+        # 基本的なGPXヘッダーの確認
+        return '<?xml' in content and ('gpx' in content.lower() or 'GPX' in content)
+        
+    except Exception:
+        return False
