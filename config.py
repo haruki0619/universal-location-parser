@@ -35,7 +35,7 @@ INPUT_TIMEZONE = "Asia/Tokyo"
 OUTPUT_TIMEZONE = "UTC"
 
 # サポートされるファイル形式（GPX追加）
-SUPPORTED_EXTENSIONS = [".json"]
+SUPPORTED_EXTENSIONS = [".json", ".kml", ".kmz"]
 GPX_EXTENSIONS = [".gpx", ".GPX"]
 
 # デバッグモード

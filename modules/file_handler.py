@@ -50,11 +50,31 @@ def find_gpx_files() -> List[str]:
     return gpx_files
 
 
+def find_kml_files() -> List[str]:
+    """データディレクトリ内のKML/KMZファイルを検索する"""
+    if not os.path.exists(DATA_DIR):
+        print(f"❌ データディレクトリが存在しません: {DATA_DIR}")
+        return []
+    
+    kml_exts = ['.kml', '.kmz', '.KML', '.KMZ']
+    files = []
+    for ext in kml_exts:
+        files.extend(glob.glob(os.path.join(DATA_DIR, f"*{ext}")))
+    
+    if DEBUG:
+        print(f"🗺️ {len(files)}個のKML/KMZファイルを発見:")
+        for file in files:
+            print(f"   - {os.path.basename(file)}")
+    
+    return files
+
+
 def find_all_files() -> Dict[str, List[str]]:
-    """すべてのサポートされているファイルを検索する"""
+    """すべてのサポートされているファイルを検索する（KML/KMZも含む）"""
     return {
         'json': find_json_files(),
-        'gpx': find_gpx_files()
+        'gpx': find_gpx_files(),
+        'kml': find_kml_files(),  # KML/KMZを追加
     }
 
 
