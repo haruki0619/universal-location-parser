@@ -4,6 +4,12 @@ Google TimelineデータとGPXファイルを統合処理する包括的なパ�
 
 ## 🌟 新機能（2025年5月更新）
 
+### 🗺️ KML/KMZ対応追加 ⭐ (最新)
+- **Google Earth形式**: KML/KMZファイルの読み込み・解析
+- **gx:Track要素**: タイムスタンプ付きトラックデータ
+- **Placemarkサポート**: ポイント・ライン・複合ジオメトリ
+- **KMZ自動展開**: ZIP圧縮されたKMLファイルの自動処理
+
 ### 🏔️ GPX対応追加
 - **YAMAP**: 登山・ハイキングデータ
 - **Garmin**: 各種スポーツアクティビティ
@@ -15,7 +21,7 @@ Google TimelineデータとGPXファイルを統合処理する包括的なパ�
 - カスタマイズ可能な分類しきい値
 
 ### 📊 統合分析
-- Timeline + GPX データの統一CSV出力
+- Timeline + GPX + KML/KMZ データの統一CSV出力
 - データタイプ別統計
 - 時系列での完全統合
 
@@ -38,20 +44,23 @@ Google TimelineデータとGPXファイルを統合処理する包括的なパ�
 
 ```
 timeline/
-├── main.py                    # 従来のJSON専用処理
-├── main_unified.py           # 新しい統合処理（JSON + GPX）⭐
-├── config.py                 # 設定ファイル（GPX対応拡張済み）
+├── main.py                    # 統合処理（JSON + GPX + KML/KMZ）⭐
+├── main_unified.py           # 従来の統合処理（JSON + GPX）
+├── config.py                 # 設定ファイル（全形式対応）
 ├── test_config.py            # 設定テストスクリプト ⭐
 ├── modules/                  # 機能別モジュール
 │   ├── __init__.py
-│   ├── file_handler.py       # ファイル操作（JSON + GPX対応）
+│   ├── file_handler.py       # ファイル操作（JSON + GPX + KML/KMZ対応）
 │   ├── json_parser.py        # Google Timeline解析
-│   ├── gpx_parser.py         # GPX解析 ⭐ (新規追加)
-│   ├── data_converter.py     # データ変換（GPX拡張対応）
+│   ├── gpx_parser.py         # GPX解析 ⭐
+│   ├── kml_parser.py         # KML/KMZ解析 ⭐ (新規追加)
+│   ├── data_converter.py     # データ変換（全形式対応）
 │   └── csv_exporter.py       # CSV出力・統計
 ├── data/                     # 入力フォルダ（Git管理外）
 │   ├── *.json               # Google Timeline JSONファイル
-│   └── *.gpx                # GPXファイル ⭐
+│   ├── *.gpx                # GPXファイル ⭐
+│   ├── *.kml                # KMLファイル ⭐ (新規追加)
+│   └── *.kmz                # KMZファイル ⭐ (新規追加)
 ├── sample_data/              # サンプルデータ
 ├── timeline_output.csv       # 統合出力ファイル
 └── README_EXTENDED.md        # 詳細ドキュメント ⭐
@@ -78,20 +87,24 @@ cp your_timeline.json data/
 # GPXファイル（YAMAP、Garmin等）
 cp yamap_activity.gpx data/
 cp garmin_activity.gpx data/
+
+# KML/KMZファイル（Google Earth等）⭐ (新規追加)
+cp your_track.kml data/
+cp your_locations.kmz data/
 ```
 
 ### 実行方法
 
-#### 🆕 推奨: 統合処理
+#### 🆕 推奨: 全形式統合処理
 ```bash
-# JSON + GPX 両方を処理
-python main_unified.py
+# JSON + GPX + KML/KMZ すべてを処理
+python main.py
 ```
 
-#### 従来: JSON専用処理
+#### 従来: JSON+GPX処理
 ```bash
-# JSONファイルのみを処理
-python main.py
+# JSON + GPXファイルのみを処理
+python main_unified.py
 ```
 
 ### 結果確認
@@ -112,13 +125,18 @@ python test_config.py
 - **Android形式**: `semanticSegments` 構造のJSONファイル
 - **iPhone形式**: `startTime` 構造のJSONファイル
 
-#### GPX形式 ⭐ (新規対応)
+#### GPX形式 ⭐
 - **YAMAP**: 登山・ハイキングデータ（`yamap_*.gpx`）
 - **Garmin**: 各種スポーツアクティビティ（`activity_*.gpx`）
 - **汎用GPX**: その他のGPSアプリからのエクスポート
 
+#### KML/KMZ形式 ⭐ (新規追加)
+- **Google Earth**: KML/KMZファイル
+- **gx:Track**: タイムスタンプ付きトラックデータ
+- **Placemark**: ポイント・ライン・複合ジオメトリ
+- **KMZ自動展開**: ZIP圧縮されたKMLの自動処理
+
 ### 🔮 今後対応予定
-- KML/KMZ（Google Earth形式）
 - Strava API連携
 - Apple Health GPS データ
 - その他のGPSトラッカーアプリ
@@ -131,12 +149,20 @@ python test_config.py
 - **GPX処理設定**: アクティビティ分類しきい値、データソース設定
 - **タイムゾーン設定**: 入力・出力タイムゾーン
 
-### file_handler.py ⭐ (GPX対応拡張)
+### file_handler.py ⭐ (KML/KMZ対応拡張)
 - JSONファイル検索・読み込み（既存）
-- **GPXファイル検索・読み込み** (新規)
-- **統合ファイル検索** (新規)
+- GPXファイル検索・読み込み（既存）
+- **KML/KMZファイル検索・読み込み** (新規)
+- **統合ファイル検索** (全形式対応)
 - 複数エンコーディング対応
 - ファイル形式検証
+
+### kml_parser.py ⭐ (新規追加)
+- **KML解析**: gx:Track、Placemark要素の解析
+- **KMZ対応**: ZIP自動展開・doc.kml抽出
+- **名前空間処理**: KML標準・Google拡張の適切な処理
+- **ジオメトリ抽出**: Point、LineString、MultiGeometry対応
+- **エラー耐性**: 破損ファイル・無効座標への対応
 
 ### gpx_parser.py ⭐ (新規追加)
 - **XML解析**: GPXファイルの構造解析
@@ -150,15 +176,16 @@ python test_config.py
 - visit/activity/timelinePathの抽出
 - 座標・時刻データの抽出
 
-### data_converter.py ⭐ (GPX拡張対応)
+### data_converter.py ⭐ (全形式対応)
 - タイムスタンプのUTC統一
-- 数値データの正規化（Timeline + GPX）
-- **GPX特有フィールド**の処理
+- 数値データの正規化（Timeline + GPX + KML/KMZ）
+- GPX特有フィールドの処理（既存）
+- **KML/KMZ特有フィールド**の処理 (新規)
 - DataFrame結合・時間順ソート
-- **統合統計情報**生成
+- **統合統計情報**生成（全形式対応）
 
-### csv_exporter.py ⭐ (GPX対応拡張)
-- **統合CSVファイル出力**（Timeline + GPX）
+### csv_exporter.py ⭐ (全形式対応)
+- **統合CSVファイル出力**（Timeline + GPX + KML/KMZ）
 - データ検証・品質チェック
 - **詳細な結果サマリー**（データタイプ別・ソース別統計）
 
@@ -177,6 +204,11 @@ visit_probability,visit_placeId,visit_semanticType,activity_distanceMeters,activ
 ### GPX特有フィールド ⭐
 ```csv
 _gpx_data_source,_gpx_track_name,_gpx_elevation,_gpx_speed,_gpx_point_sequence
+```
+
+### KML/KMZ特有フィールド ⭐ (新規追加)
+```csv
+elevation,kml_source_type,kml_element_type,kml_placemark_name
 ```
 
 ## 🎯 アクティビティ自動分類
