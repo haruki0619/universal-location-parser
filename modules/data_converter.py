@@ -47,6 +47,9 @@ def convert_records_to_dataframe(records: List[Dict]) -> pd.DataFrame:
         return pd.DataFrame()
     
     df = pd.DataFrame(records)
+
+    if DEBUG:
+        print(f"   🔄 {len(df)} レコードを変換中...")
     
     # 時間カラムの変換
     time_columns = ['start_time', 'end_time', 'point_time']
@@ -91,6 +94,9 @@ def sort_dataframe_by_time(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return df
 
+    if DEBUG:
+        print("   🔄 時間順ソート中...")
+
     # すべての時間列をUTC naiveなdatetime64[ns]に統一
     for col in ["point_time", "start_time", "end_time"]:
         if col in df.columns:
@@ -105,8 +111,14 @@ def sort_dataframe_by_time(df: pd.DataFrame) -> pd.DataFrame:
     if not sort_time.isna().all():
         sorted_indices = sort_time.sort_values().index
         df_sorted = df.loc[sorted_indices].reset_index(drop=True)
+
+        if DEBUG:
+            print(f"   ✅ 時間順ソート完了")
+
         return df_sorted
     else:
+        if DEBUG:
+            print("   ⚠️ ソート可能な時間データなし")
         return df
 
 
@@ -114,8 +126,15 @@ def combine_dataframes(dataframes: List[pd.DataFrame]) -> pd.DataFrame:
     """複数のDataFrameを結合"""
     if not dataframes:
         return pd.DataFrame()
+
+    if DEBUG:
+        total_records = sum(len(df) for df in dataframes)
+        print(f"🔗 {len(dataframes)}個のDataFrameを結合中... (総{total_records}レコード)")
     
     combined_df = pd.concat(dataframes, ignore_index=True)
+
+    if DEBUG:
+        print(f"✅ 結合完了: {len(combined_df)} レコード")
     
     return combined_df
 

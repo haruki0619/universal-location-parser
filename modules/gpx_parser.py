@@ -19,7 +19,9 @@ def parse_gpx_file(file_path: str, username: str) -> List[Dict]:
         return parse_gpx_content(content, username, file_path)
         
     except Exception as e:
-        pass
+        if DEBUG:
+            print(f"   ❌ GPXファイル読み込みエラー: {e}")
+        return []
 
 
 def parse_gpx_content(gpx_content: str, username: str, filename: str = "") -> List[Dict]:
@@ -51,13 +53,20 @@ def parse_gpx_content(gpx_content: str, username: str, filename: str = "") -> Li
             wpt_record = process_waypoint(waypoint, wpt_idx, namespace, username, data_source)
             if wpt_record:
                 records.append(wpt_record)
-        
+
+        if DEBUG:
+            print(f"   📊 GPXレコード抽出: {len(records)}件")
+
         return records
         
     except ET.ParseError as e:
-        pass
+        if DEBUG:
+            print(f"   ❌ GPX解析エラー: {e}")
+        return []
     except Exception as e:
-        pass
+        if DEBUG:
+            print(f"   ❌ GPX処理エラー: {e}")
+        return []
 
 
 def detect_data_source(filename: str) -> str:

@@ -34,6 +34,8 @@ def process_json_files(json_files):
         
         # データ妥当性チェック
         if not validate_json_data(data):
+            if DEBUG:
+                print("   ❌ 無効なJSONデータ形式")
             continue
         
         # ユーザー名生成
@@ -51,6 +53,9 @@ def process_json_files(json_files):
         
         processed_dataframes.append(df)
         processed_count += 1
+
+        if DEBUG:
+            print(f"   ✅ {len(df)} レコード抽出完了")
     
     return processed_dataframes, processed_count
 
@@ -65,6 +70,8 @@ def process_gpx_files(gpx_files):
         
         # ファイル妥当性チェック
         if not validate_gpx_file(gpx_file):
+            if DEBUG:
+                print("   ❌ 無効なGPXファイル形式")
             continue
         
         # ユーザー名生成
@@ -82,6 +89,9 @@ def process_gpx_files(gpx_files):
         
         processed_dataframes.append(df)
         processed_count += 1
+
+        if DEBUG:
+            print(f"   ✅ {len(df)} レコード抽出完了")
     
     return processed_dataframes, processed_count
 
@@ -208,4 +218,8 @@ if __name__ == "__main__":
         print("\n\n🛑 処理が中断されました")
     except Exception as e:
         print(f"\n❌ 予期しないエラーが発生しました: {e}")
+        if DEBUG:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)
         sys.exit(1)

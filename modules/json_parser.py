@@ -206,7 +206,10 @@ def parse_json_data(data: Union[Dict, List], username: str) -> List[Dict]:
     """JSONデータを解析してレコードリストを返す"""
     try:
         data_format = detect_format(data)
-        
+
+        if DEBUG:
+            print(f"   📱 データ形式: {data_format.upper()}")
+
         if data_format == "android":
             return parse_android_data(data, username)
         elif data_format == "iphone":
@@ -215,6 +218,8 @@ def parse_json_data(data: Union[Dict, List], username: str) -> List[Dict]:
             raise ValueError(f"未対応の形式: {data_format}")
             
     except Exception as e:
-        pass
+        if DEBUG:
+            print(f"   ❌ データ解析エラー: {e}")
+        return []
 
     return []

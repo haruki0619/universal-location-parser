@@ -30,16 +30,23 @@ def find_json_files(base_dir=DATA_DIR):
     """
     データディレクトリ内のJSONファイルを検索する。
     Args:
-        base_dir (Path): 検索対象ディレクトリ。
+        base_dir (str or Path): 検索対象ディレクトリ。
     Returns:
         list: JSONファイルのパスリスト。
     Note:
         ディレクトリが存在しない場合は空リストを返す。
     """
+    base_dir = Path(base_dir)
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
     files = _glob_exts(base_dir, JSON_EXTS)
+    
+    if DEBUG:
+        print(f"📁 {len(files)}個のJSONファイルを発見:")
+        for file in files:
+            print(f"   - {os.path.basename(file)}")
+    
     return files
 
 
@@ -47,14 +54,21 @@ def find_gpx_files(base_dir=DATA_DIR):
     """
     データディレクトリ内のGPXファイルを検索する。
     Args:
-        base_dir (Path): 検索対象ディレクトリ。
+        base_dir (str or Path): 検索対象ディレクトリ。
     Returns:
         list: GPXファイルのパスリスト。
     """
+    base_dir = Path(base_dir)
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
     files = _glob_exts(base_dir, GPX_EXTS)
+    
+    if DEBUG:
+        print(f"🏔️ {len(files)}個のGPXファイルを発見:")
+        for file in files:
+            print(f"   - {os.path.basename(file)}")
+    
     return files
 
 
@@ -62,10 +76,11 @@ def find_kml_files(base_dir=DATA_DIR):
     """
     データディレクトリ内のKML/KMZファイルを検索する。
     Args:
-        base_dir (Path): 検索対象ディレクトリ。
+        base_dir (str or Path): 検索対象ディレクトリ。
     Returns:
         list: KML/KMZファイルのパスリスト。
     """
+    base_dir = Path(base_dir)
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
@@ -100,10 +115,15 @@ def load_json_file(filepath) -> Union[Dict, List, None]:
         - utf-8, shift_jis, cp932等で順次デコードを試みる。
         - JSONDecodeErrorやUnicodeDecodeErrorは握りつぶして次のエンコーディングへ。
     """
+    if DEBUG:
+        print(f"📖 読み込み中: {os.path.basename(filepath)}")
+
     try:
         # ファイルサイズチェック
         file_size = os.path.getsize(filepath)
         if file_size == 0:
+            if DEBUG:
+                print("   ❌ ファイルが空です")
             return None
         
         # 複数エンコーディングで試行
@@ -113,24 +133,32 @@ def load_json_file(filepath) -> Union[Dict, List, None]:
             try:
                 with open(filepath, 'r', encoding=encoding) as f:
                     content = f.read().strip()
-                
+
                 if not content:
+                    if DEBUG:
+                        print("   ❌ ファイル内容が空です")
                     return None
-                
+
                 data = json.loads(content)
+                if DEBUG:
+                    print(f"   ✅ 読み込み成功 ({encoding})")
                 return data
                 
             except UnicodeDecodeError:
                 continue
             except json.JSONDecodeError as e:
+                if DEBUG:
+                    print(f"   ❌ JSON解析エラー ({encoding}): {e}")
                 continue
         
+        if DEBUG:
+            print("   ❌ 全エンコーディングで失敗")
         return None
         
     except Exception as e:
-        # 予期せぬ例外は握りつぶしてNone返却
-        pass
-    return None
+        if DEBUG:
+            print(f"   ❌ ファイル読み込みエラー: {e}")
+        return None
 
 
 def get_username() -> str:

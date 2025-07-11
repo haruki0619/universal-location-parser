@@ -127,11 +127,20 @@ def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
     records: List[Dict] = []
 
     def _walk(feat):  # noqa: WPS430
-        for f in feat.features():
-            if hasattr(f, "geometry") and f.geometry is not None:
-                _handle_geometry(f.geometry, records)
-            if hasattr(f, "features"):
-                _walk(f)
+        # featuresが関数かリストかを判定して適切に処理
+        if hasattr(feat, "features"):
+            try:
+                # 関数として呼び出してみる
+                features = feat.features()
+            except TypeError:
+                # リストの場合
+                features = feat.features
+            
+            for f in features:
+                if hasattr(f, "geometry") and f.geometry is not None:
+                    _handle_geometry(f.geometry, records)
+                if hasattr(f, "features"):
+                    _walk(f)
 
     def _handle_geometry(geom, store: List[Dict]):  # noqa: WPS231
         """
@@ -191,7 +200,32 @@ def parse_kml_file(filepath: str | os.PathLike, *, username: str | None = None) 
     if not records:
         k = _kml.KML()
         k.from_string(kml_bytes)
-        records = _extract_simple_geometries(k)
+        
+        # KMLオブジェクトから直接featuresを取得
+        for feature in k.features:
+            if hasattr(feature, 'features'):
+                for placemark in feature.features:
+                    if hasattr(placemark, 'geometry') and placemark.geometry is not None:
+                        geom = placemark.geometry
+                        if hasattr(geom, 'coords'):
+                            for lon, lat, *rest in geom.coords:
+                                records.append({
+                                    "latitude": lat,
+                                    "longitude": lon,
+                                    "elevation": rest[0] if rest else None,
+                                    "type": f"kml_{geom.__class__.__name__.lower()}",
+                                })
+                        elif hasattr(geom, 'geoms'):
+                            # MultiGeometry対応
+                            for sub_geom in geom.geoms:
+                                if hasattr(sub_geom, 'coords'):
+                                    for lon, lat, *rest in sub_geom.coords:
+                                        records.append({
+                                            "latitude": lat,
+                                            "longitude": lon,
+                                            "elevation": rest[0] if rest else None,
+                                            "type": f"kml_{sub_geom.__class__.__name__.lower()}",
+                                        })
 
     # usernameを付与（指定時）
     if username is not None:
