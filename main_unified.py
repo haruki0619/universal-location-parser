@@ -15,6 +15,8 @@ from modules.gpx_parser import parse_gpx_file
 from modules.data_converter import convert_records_to_dataframe, sort_dataframe_by_time, combine_dataframes
 from modules.csv_exporter import export_to_csv, print_summary, validate_output_data
 from config import OUTPUT_FILE, DEBUG
+from modules import kml_parser
+import pandas as pd
 
 
 def process_json_files(json_files):
@@ -32,8 +34,6 @@ def process_json_files(json_files):
         
         # データ妥当性チェック
         if not validate_json_data(data):
-            if DEBUG:
-                print("   ❌ 無効なJSONデータ形式")
             continue
         
         # ユーザー名生成
@@ -51,9 +51,6 @@ def process_json_files(json_files):
         
         processed_dataframes.append(df)
         processed_count += 1
-        
-        if DEBUG:
-            print(f"   ✅ {len(df)} レコード抽出完了")
     
     return processed_dataframes, processed_count
 
@@ -68,8 +65,6 @@ def process_gpx_files(gpx_files):
         
         # ファイル妥当性チェック
         if not validate_gpx_file(gpx_file):
-            if DEBUG:
-                print("   ❌ 無効なGPXファイル形式")
             continue
         
         # ユーザー名生成
@@ -87,9 +82,6 @@ def process_gpx_files(gpx_files):
         
         processed_dataframes.append(df)
         processed_count += 1
-        
-        if DEBUG:
-            print(f"   ✅ {len(df)} レコード抽出完了")
     
     return processed_dataframes, processed_count
 
@@ -135,6 +127,26 @@ def main():
         all_dataframes.extend(gpx_dataframes)
         total_processed += gpx_processed
         print(f"✅ GPX処理完了: {gpx_processed}/{len(gpx_files)}個のファイルを処理")
+    
+    # KMLファイルの処理
+    kml_files = all_files.get('kml', [])
+    if kml_files:
+        print(f"\n🗺️ KML/KMZ処理: {len(kml_files)}個のファイルを処理中...")
+        kml_processed = 0
+        for i, kml_file in enumerate(kml_files, 1):
+            print(f"[KML {i}/{len(kml_files)}] {os.path.basename(kml_file)}")
+            ext = os.path.splitext(kml_file)[1].lower()
+            if ext in {".kml", ".kmz"}:
+                try:
+                    username = get_username_from_filename(kml_file)
+                    records = kml_parser.parse_kml_file(kml_file, username=username)
+                    df = convert_records_to_dataframe(records)  # ← ここで正規化
+                    if not df.empty:
+                        all_dataframes.append(df)
+                        kml_processed += 1
+                except Exception as exc:
+                    print(f"   ❌ KML解析エラー: {exc}")
+        print(f"✅ KML/KMZ処理完了: {kml_processed}/{len(kml_files)}個のファイルを処理")
     
     # 3. データ統合
     if not all_dataframes:
@@ -196,7 +208,4 @@ if __name__ == "__main__":
         print("\n\n🛑 処理が中断されました")
     except Exception as e:
         print(f"\n❌ 予期しないエラーが発生しました: {e}")
-        if DEBUG:
-            import traceback
-            traceback.print_exc()
         sys.exit(1)
