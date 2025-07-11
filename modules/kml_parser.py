@@ -56,7 +56,16 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 def _read_kml_bytes(filepath: str | os.PathLike) -> bytes:
-    """KMLまたはKMZファイルからKMLバイト列を取得（KMZはdoc.kmlを展開）"""
+    """
+    KMLまたはKMZファイルからKMLバイト列を取得する。
+    KMZの場合はZIP展開してdoc.kmlを抽出。
+    Args:
+        filepath (str | Path): KMLまたはKMZファイルのパス。
+    Returns:
+        bytes: KMLファイルのバイト列。
+    Raises:
+        FileNotFoundError: ファイルが存在しない、またはKMZ内にdoc.kmlがない場合。
+    """
     path = Path(filepath)
     if path.suffix.lower() == ".kmz":
         with zipfile.ZipFile(path, "r") as kmz:
@@ -70,7 +79,16 @@ def _read_kml_bytes(filepath: str | os.PathLike) -> bytes:
 
 
 def _extract_gx_track(root: etree._Element) -> List[Dict]:  # noqa: WPS110
-    """<gx:Track>要素から時刻・座標を抽出し、dictリスト化（Google拡張対応）"""
+    """
+    <gx:Track>要素から時刻・座標を抽出し、dictリスト化（Google拡張対応）。
+    Args:
+        root (etree._Element): KMLのルート要素。
+    Returns:
+        List[Dict]: 各track点のdictリスト。
+    Note:
+        - <when>と<gx:coord>の数が不一致の場合は警告。
+        - 座標パース失敗時はスキップ。
+    """
     records: List[Dict] = []
     for track in root.findall(".//gx:Track", namespaces=_NS):
         whens = [e.text for e in track.findall("kml:when", namespaces=_NS)]
@@ -96,7 +114,16 @@ def _extract_gx_track(root: etree._Element) -> List[Dict]:  # noqa: WPS110
 
 
 def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
-    """Placemark配下のPoint/LineString/MultiGeometryを再帰的に抽出"""
+    """
+    Placemark配下のPoint/LineString/MultiGeometryを再帰的に抽出。
+    Args:
+        k (_kml.KML): fastkmlでパース済みKMLオブジェクト。
+    Returns:
+        List[Dict]: 各ジオメトリ点のdictリスト。
+    Note:
+        - MultiGeometryは再帰的にflatten。
+        - geometryが空の場合はスキップ。
+    """
     records: List[Dict] = []
 
     def _walk(feat):  # noqa: WPS430
@@ -107,7 +134,12 @@ def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
                 _walk(f)
 
     def _handle_geometry(geom, store: List[Dict]):  # noqa: WPS231
-        """ジオメトリをflattenし座標列をdict化して追加"""
+        """
+        ジオメトリをflattenし座標列をdict化して追加。
+        Args:
+            geom: fastkmlのgeometryオブジェクト。
+            store (List[Dict]): 結果格納リスト。
+        """
         geom_type = geom.__class__.__name__.lower()
         if geom.is_empty:  # type: ignore[attr-defined]
             return
@@ -139,15 +171,15 @@ def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
 def parse_kml_file(filepath: str | os.PathLike, *, username: str | None = None) -> List[Dict]:
     """
     指定したKML/KMZファイルをパースし、位置情報dictのリストを返す。
-    dictのスキーマ例::
-        {
-            "latitude": float,      # 緯度
-            "longitude": float,     # 経度
-            "elevation": float | None,  # 標高（なければNone）
-            "point_time": str | None,   # ISO8601時刻（gx:Track等のみ）
-            "type": str,           # "kml_gx_track"や"kml_point"等
-            "username": str | None,
-        }
+    Args:
+        filepath (str | Path): KML/KMZファイルのパス。
+        username (str | None): 各レコードに付与するユーザー名（任意）。
+    Returns:
+        List[Dict]: 位置情報dictリスト（スキーマはdocstring参照）。
+    Note:
+        - gx:Track（Google拡張）があれば優先。
+        - なければPlacemark配下のPoint/LineString等を抽出。
+        - username指定時は全レコードに付与。
     """
     kml_bytes = _read_kml_bytes(filepath)
 
@@ -178,7 +210,6 @@ def parse_kml_file(filepath: str | os.PathLike, *, username: str | None = None) 
 if __name__ == "__main__":  # pragma: no cover
     import argparse
     import json
-
     parser = argparse.ArgumentParser(description="Parse KML/KMZ file and dump JSON")
     parser.add_argument("filepath", help="path to .kml/.kmz file")
     parser.add_argument("--username", help="username to annotate", default=None)

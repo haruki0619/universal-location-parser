@@ -12,6 +12,14 @@ from pathlib import Path
 
 
 def _glob_exts(base_dir: Path, exts: list) -> list:
+    """
+    指定ディレクトリ以下から指定拡張子のファイルを再帰的に検索する。
+    Args:
+        base_dir (Path): 検索対象ディレクトリ。
+        exts (list): 検索する拡張子リスト（例: ['.json', '.gpx']）。
+    Returns:
+        list: ファイルパスのリスト（重複なし、ソート済み）。
+    """
     files = []
     for ext in exts:
         files.extend(base_dir.glob(f"**/*{ext}"))
@@ -19,7 +27,15 @@ def _glob_exts(base_dir: Path, exts: list) -> list:
 
 
 def find_json_files(base_dir=DATA_DIR):
-    """データディレクトリ内のJSONファイルを検索する"""
+    """
+    データディレクトリ内のJSONファイルを検索する。
+    Args:
+        base_dir (Path): 検索対象ディレクトリ。
+    Returns:
+        list: JSONファイルのパスリスト。
+    Note:
+        ディレクトリが存在しない場合は空リストを返す。
+    """
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
@@ -28,7 +44,13 @@ def find_json_files(base_dir=DATA_DIR):
 
 
 def find_gpx_files(base_dir=DATA_DIR):
-    """データディレクトリ内のGPXファイルを検索する"""
+    """
+    データディレクトリ内のGPXファイルを検索する。
+    Args:
+        base_dir (Path): 検索対象ディレクトリ。
+    Returns:
+        list: GPXファイルのパスリスト。
+    """
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
@@ -37,7 +59,13 @@ def find_gpx_files(base_dir=DATA_DIR):
 
 
 def find_kml_files(base_dir=DATA_DIR):
-    """データディレクトリ内のKML/KMZファイルを検索する"""
+    """
+    データディレクトリ内のKML/KMZファイルを検索する。
+    Args:
+        base_dir (Path): 検索対象ディレクトリ。
+    Returns:
+        list: KML/KMZファイルのパスリスト。
+    """
     if not base_dir.exists():
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
@@ -46,7 +74,13 @@ def find_kml_files(base_dir=DATA_DIR):
 
 
 def find_all_files(base_dir: Path = Path(DATA_DIR)) -> dict:
-    """すべてのサポートされているファイルを検索する（KML/KMZも含む）"""
+    """
+    すべてのサポートされているファイルを検索する（KML/KMZも含む）。
+    Args:
+        base_dir (Path): 検索対象ディレクトリ。
+    Returns:
+        dict: 拡張子ごとのファイルリスト辞書。
+    """
     return {
         "json": find_json_files(base_dir),
         "gpx": find_gpx_files(base_dir),
@@ -55,7 +89,17 @@ def find_all_files(base_dir: Path = Path(DATA_DIR)) -> dict:
 
 
 def load_json_file(filepath) -> Union[Dict, List, None]:
-    """ファイルを安全に読み込む"""
+    """
+    JSONファイルを安全に読み込む（複数エンコーディング対応）。
+    Args:
+        filepath (str): 読み込み対象ファイルパス。
+    Returns:
+        dict, list, or None: パース済みデータ。失敗時はNone。
+    Note:
+        - ファイルサイズ0や空ファイルはNone。
+        - utf-8, shift_jis, cp932等で順次デコードを試みる。
+        - JSONDecodeErrorやUnicodeDecodeErrorは握りつぶして次のエンコーディングへ。
+    """
     try:
         # ファイルサイズチェック
         file_size = os.path.getsize(filepath)
@@ -84,28 +128,35 @@ def load_json_file(filepath) -> Union[Dict, List, None]:
         return None
         
     except Exception as e:
+        # 予期せぬ例外は握りつぶしてNone返却
         pass
     return None
 
 
 def get_username() -> str:
-    """固定ユーザー名を返す"""
+    """
+    設定ファイルから固定ユーザー名を返す。
+    Returns:
+        str: ユーザー名。
+    """
     return USERNAME
 
 
 def get_username_from_filename(filepath: str) -> str:
-    """ファイル名からユーザー名を抽出する
-    
-    ファイル名のパターンによってユーザー名を決定します
-    見つからない場合は固定ユーザー名を返します
+    """
+    ファイル名からユーザー名を抽出する。
+    Args:
+        filepath (str): 対象ファイルパス。
+    Returns:
+        str: 抽出されたユーザー名。見つからない場合は設定ファイルのユーザー名。
+    Note:
+        - "username-"や"user-"プレフィックス、アンダースコア区切り等に対応。
     """
     # ファイル名から基本名を取得（拡張子を除く）
     basename = os.path.basename(filepath)
     filename_without_ext = os.path.splitext(basename)[0]
     
     # ファイル名からユーザー名のパターンを識別
-    # ここでは簡単な例を示しています。必要に応じてパターンを追加してください
-    
     # 1. ファイル名に「username-」または「user-」プレフィックスがある場合
     if filename_without_ext.lower().startswith("username-"):
         return filename_without_ext[9:]
@@ -122,7 +173,16 @@ def get_username_from_filename(filepath: str) -> str:
 
 
 def validate_json_data(data: Union[Dict, List]) -> bool:
-    """データの基本的な検証"""
+    """
+    JSONデータの基本的な検証（Android/iPhone形式の判定）。
+    Args:
+        data (dict or list): 検証対象データ。
+    Returns:
+        bool: 有効な形式ならTrue。
+    Note:
+        - Android形式: dictで'semanticSegments'キーを持つ
+        - iPhone形式: listで先頭要素に'startTime'キーを持つ
+    """
     if data is None:
         return False
     
@@ -136,7 +196,15 @@ def validate_json_data(data: Union[Dict, List]) -> bool:
 
 
 def validate_gpx_file(filepath: str) -> bool:
-    """GPXファイルの基本的な検証"""
+    """
+    GPXファイルの基本的な検証（ヘッダー確認）。
+    Args:
+        filepath (str): 検証対象ファイルパス。
+    Returns:
+        bool: GPXファイルらしければTrue。
+    Note:
+        - 先頭1000文字に<?xml ... gpx>タグがあればOK。
+    """
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read(1000)  # 最初の1000文字をチェック
