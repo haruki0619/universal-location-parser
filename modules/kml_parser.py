@@ -11,7 +11,7 @@ Google Earth などでエクスポートされる **KML / KMZ** ファイルか�
 ---------
 * **gx:Track** ― Google 拡張タグを優先解析（<when> + <gx:coord>）
 * **Placemark (Point / LineString / MultiGeometry)** ― fastkml で抽出
-* **KMZ** ― ZIP 展開して ``doc.kml`` を自動読込
+* **KMZ** ― ZIP 展開して ``doc.kml`` を自動読込（なければ最初の .kml を採用）
 * **エラー耐性** ― 破損ファイル・未知ジオメトリを警告ログに残しスキップ
 
 依存
@@ -58,21 +58,29 @@ __all__ = [
 def _read_kml_bytes(filepath: str | os.PathLike) -> bytes:
     """
     KMLまたはKMZファイルからKMLバイト列を取得する。
-    KMZの場合はZIP展開してdoc.kmlを抽出。
+    KMZの場合はZIP展開してdoc.kmlを抽出。なければ最初に見つかった.kmlを使用。
     Args:
         filepath (str | Path): KMLまたはKMZファイルのパス。
     Returns:
         bytes: KMLファイルのバイト列。
     Raises:
-        FileNotFoundError: ファイルが存在しない、またはKMZ内にdoc.kmlがない場合。
+        FileNotFoundError: ファイルが存在しない、またはKMZ内にKMLが見つからない場合。
     """
     path = Path(filepath)
     if path.suffix.lower() == ".kmz":
         with zipfile.ZipFile(path, "r") as kmz:
             try:
                 return kmz.read("doc.kml")
-            except KeyError as exc:
-                raise FileNotFoundError("KMZ 内に doc.kml が見つかりません") from exc
+            except KeyError:
+                # doc.kml がない場合、最初の .kml を探す
+                candidates = [n for n in kmz.namelist() if n.lower().endswith(".kml")]
+                if candidates:
+                    # doc.kml に近い名前を優先
+                    candidates.sort(key=lambda n: ("doc.kml" not in n.lower(), len(n)))
+                    chosen = candidates[0]
+                    _LOGGER.debug("KMZ内の代替KMLを使用: %s", chosen)
+                    return kmz.read(chosen)
+                raise FileNotFoundError("KMZ 内に KML ファイルが見つかりません")
     if not path.exists():
         raise FileNotFoundError(str(path))
     return path.read_bytes()
@@ -86,8 +94,9 @@ def _extract_gx_track(root: etree._Element) -> List[Dict]:  # noqa: WPS110
     Returns:
         List[Dict]: 各track点のdictリスト。
     Note:
-        - <when>と<gx:coord>の数が不一致の場合は警告。
+        - <when>と<gx:coord>の数が不一致の場合は短い方に合わせる。
         - 座標パース失敗時はスキップ。
+        - MultiTrack配下のTrackも .//gx:Track で拾われる。
     """
     records: List[Dict] = []
     for track in root.findall(".//gx:Track", namespaces=_NS):
@@ -95,7 +104,7 @@ def _extract_gx_track(root: etree._Element) -> List[Dict]:  # noqa: WPS110
         coords = [e.text for e in track.findall("gx:coord", namespaces=_NS)]
         if len(whens) != len(coords):
             _LOGGER.warning("gx:Track の when と coord の数が不一致: %s vs %s", len(whens), len(coords))
-        for when, coord in zip(whens, coords):
+        for when, coord in zip(whens, coords):  # zipで短い方に合わせる
             try:
                 lon, lat, *ele = map(float, coord.split())
             except ValueError:  # pragma: no cover
@@ -150,7 +159,7 @@ def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
             store (List[Dict]): 結果格納リスト。
         """
         geom_type = geom.__class__.__name__.lower()
-        if geom.is_empty:  # type: ignore[attr-defined]
+        if getattr(geom, "is_empty", False):  # type: ignore[attr-defined]
             return
         try:
             coords_iter = list(geom.coords)  # type: ignore[attr-defined]
@@ -173,6 +182,102 @@ def _extract_simple_geometries(k: _kml.KML) -> List[Dict]:  # noqa: WPS231
     _walk(k)
     return records
 
+
+def _parse_coordinates_text(text: Optional[str]) -> List[tuple]:
+    """KMLの<coordinates>文字列を (lon, lat, ele?) のリストに解析。"""
+    if not text:
+        return []
+    items: List[tuple] = []
+    for token in text.replace("\n", " ").replace("\t", " ").split():
+        parts = token.split(",")
+        try:
+            lon = float(parts[0])
+            lat = float(parts[1]) if len(parts) > 1 else None
+            ele = float(parts[2]) if len(parts) > 2 else None
+            if lat is not None:
+                items.append((lon, lat, ele))
+        except Exception:  # pragma: no cover - 不正トークンはスキップ
+            continue
+    return items
+
+
+def _extract_placemark_with_times(root: etree._Element) -> List[Dict]:
+    """TimeStamp/TimeSpan を持つ Placemark の座標を抽出し時間を付与。"""
+    recs: List[Dict] = []
+    for pm in root.findall(".//kml:Placemark", namespaces=_NS):
+        # 時刻の抽出
+        ts = pm.find("kml:TimeStamp/kml:when", namespaces=_NS)
+        tspan_begin = pm.find("kml:TimeSpan/kml:begin", namespaces=_NS)
+        tspan_end = pm.find("kml:TimeSpan/kml:end", namespaces=_NS)
+        point_time = ts.text if ts is not None else None
+        start_time = tspan_begin.text if tspan_begin is not None else None
+        end_time = tspan_end.text if tspan_end is not None else None
+        if not any([point_time, start_time, end_time]):
+            continue
+        # Point
+        for coords in pm.findall(".//kml:Point/kml:coordinates", namespaces=_NS):
+            for lon, lat, ele in _parse_coordinates_text(coords.text):
+                recs.append(
+                    {
+                        "latitude": lat,
+                        "longitude": lon,
+                        "elevation": ele,
+                        "point_time": point_time,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "type": "kml_point",
+                    }
+                )
+        # LineString（各頂点を点として展開）
+        for coords in pm.findall(".//kml:LineString/kml:coordinates", namespaces=_NS):
+            for lon, lat, ele in _parse_coordinates_text(coords.text):
+                recs.append(
+                    {
+                        "latitude": lat,
+                        "longitude": lon,
+                        "elevation": ele,
+                        "point_time": point_time,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "type": "kml_linestring",
+                    }
+                )
+    return recs
+
+
+def _extract_geometries_without_times(root: etree._Element) -> List[Dict]:
+    """Time要素が無いPlacemarkの Point/LineString をlxmlで直接抽出。"""
+    recs: List[Dict] = []
+    # Point
+    for coords in root.findall(".//kml:Placemark//kml:Point/kml:coordinates", namespaces=_NS):
+        for lon, lat, ele in _parse_coordinates_text(coords.text):
+            recs.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "elevation": ele,
+                    "point_time": None,
+                    "start_time": None,
+                    "end_time": None,
+                    "type": "kml_point",
+                }
+            )
+    # LineString → 各頂点
+    for coords in root.findall(".//kml:Placemark//kml:LineString/kml:coordinates", namespaces=_NS):
+        for lon, lat, ele in _parse_coordinates_text(coords.text):
+            recs.append(
+                {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "elevation": ele,
+                    "point_time": None,
+                    "start_time": None,
+                    "end_time": None,
+                    "type": "kml_linestring",
+                }
+            )
+    return recs
+
 # ---------------------------------------------------------------------------
 # Public API（外部公開関数）
 # ---------------------------------------------------------------------------
@@ -187,7 +292,8 @@ def parse_kml_file(filepath: str | os.PathLike, *, username: str | None = None) 
         List[Dict]: 位置情報dictリスト（スキーマはdocstring参照）。
     Note:
         - gx:Track（Google拡張）があれば優先。
-        - なければPlacemark配下のPoint/LineString等を抽出。
+        - TimeStamp/TimeSpan付きPlacemarkを次に試行。
+        - それでもなければPlacemark配下のPoint/LineString等を抽出。
         - username指定時は全レコードに付与。
     """
     kml_bytes = _read_kml_bytes(filepath)
@@ -196,36 +302,21 @@ def parse_kml_file(filepath: str | os.PathLike, *, username: str | None = None) 
     root = etree.fromstring(kml_bytes)  # nosec B314
     records = _extract_gx_track(root)
 
+    # --- 次に TimeStamp/TimeSpan 付き Placemark ---
+    if not records:
+        timed = _extract_placemark_with_times(root)
+        if timed:
+            records = timed
+
     # --- fallback: Placemark (Point/LineString etc.) ---
     if not records:
         k = _kml.KML()
         k.from_string(kml_bytes)
-        
-        # KMLオブジェクトから直接featuresを取得
-        for feature in k.features:
-            if hasattr(feature, 'features'):
-                for placemark in feature.features:
-                    if hasattr(placemark, 'geometry') and placemark.geometry is not None:
-                        geom = placemark.geometry
-                        if hasattr(geom, 'coords'):
-                            for lon, lat, *rest in geom.coords:
-                                records.append({
-                                    "latitude": lat,
-                                    "longitude": lon,
-                                    "elevation": rest[0] if rest else None,
-                                    "type": f"kml_{geom.__class__.__name__.lower()}",
-                                })
-                        elif hasattr(geom, 'geoms'):
-                            # MultiGeometry対応
-                            for sub_geom in geom.geoms:
-                                if hasattr(sub_geom, 'coords'):
-                                    for lon, lat, *rest in sub_geom.coords:
-                                        records.append({
-                                            "latitude": lat,
-                                            "longitude": lon,
-                                            "elevation": rest[0] if rest else None,
-                                            "type": f"kml_{sub_geom.__class__.__name__.lower()}",
-                                        })
+        records = _extract_simple_geometries(k)
+
+    # --- 最終fallback: lxmlでの幾何抽出（shapely未導入環境向け） ---
+    if not records:
+        records = _extract_geometries_without_times(root)
 
     # usernameを付与（指定時）
     if username is not None:

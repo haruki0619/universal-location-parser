@@ -107,29 +107,29 @@ def main():
     print("\n📁 ファイルを検索中...")
     all_files = find_all_files()
     json_files = all_files['json']
-    gpx_files = all_files['gpx']
+    gpx_files = all_files.get('gpx', [])
+    kml_files = all_files.get('kml', [])
     
-    total_files = len(json_files) + len(gpx_files)
+    total_files = len(json_files) + len(gpx_files) + len(kml_files)
     
     if total_files == 0:
         print("❌ 処理するファイルが見つかりません")
-        print(f"   dataディレクトリ({os.path.abspath('data')})にJSONまたはGPXファイルを配置してください")
+        print(f"   dataディレクトリ({os.path.abspath('data')})にファイルを配置してください")
         return
     
-    print(f"📊 発見ファイル: JSON {len(json_files)}個, GPX {len(gpx_files)}個")
-    
-    # 2. 各ファイルタイプを処理
+    print(f"📊 発見ファイル: JSON {len(json_files)}個, GPX {len(gpx_files)}個, KML/KMZ {len(kml_files)}個")
+
     all_dataframes = []
     total_processed = 0
-    
-    # JSONファイルの処理
+
+    # 2. JSONファイルの処理
     if json_files:
         print(f"\n🔄 JSON処理: {len(json_files)}個のファイルを処理中...")
         json_dataframes, json_processed = process_json_files(json_files)
         all_dataframes.extend(json_dataframes)
         total_processed += json_processed
         print(f"✅ JSON処理完了: {json_processed}/{len(json_files)}個のファイルを処理")
-    
+
     # GPXファイルの処理
     if gpx_files:
         print(f"\n🏔️ GPX処理: {len(gpx_files)}個のファイルを処理中...")
@@ -137,9 +137,8 @@ def main():
         all_dataframes.extend(gpx_dataframes)
         total_processed += gpx_processed
         print(f"✅ GPX処理完了: {gpx_processed}/{len(gpx_files)}個のファイルを処理")
-    
+
     # KMLファイルの処理
-    kml_files = all_files.get('kml', [])
     if kml_files:
         print(f"\n🗺️ KML/KMZ処理: {len(kml_files)}個のファイルを処理中...")
         kml_processed = 0
@@ -150,14 +149,17 @@ def main():
                 try:
                     username = get_username_from_filename(kml_file)
                     records = kml_parser.parse_kml_file(kml_file, username=username)
-                    df = convert_records_to_dataframe(records)  # ← ここで正規化
+                    df = convert_records_to_dataframe(records)  # 正規化
                     if not df.empty:
                         all_dataframes.append(df)
                         kml_processed += 1
+                        if DEBUG:
+                            print(f"   ✅ {len(df)} レコード抽出完了")
                 except Exception as exc:
                     print(f"   ❌ KML解析エラー: {exc}")
         print(f"✅ KML/KMZ処理完了: {kml_processed}/{len(kml_files)}個のファイルを処理")
-    
+        total_processed += kml_processed
+
     # 3. データ統合
     if not all_dataframes:
         print("\n❌ 有効なデータが見つかりませんでした")
@@ -190,13 +192,7 @@ def main():
         
         print_summary(sorted_df, output_file)
         
-        # データタイプ別統計
-        print("\n📈 データタイプ別統計:")
-        type_counts = sorted_df['type'].value_counts()
-        for data_type, count in type_counts.items():
-            print(f"   - {data_type}: {count:,}件")
-        
-        # データソース別統計（GPXデータがある場合）
+        # GPXデータソース別統計
         if '_gpx_data_source' in sorted_df.columns:
             gpx_data = sorted_df[sorted_df['type'].str.startswith('gpx', na=False)]
             if not gpx_data.empty:
@@ -204,7 +200,7 @@ def main():
                 source_counts = gpx_data['_gpx_data_source'].value_counts()
                 for source, count in source_counts.items():
                     print(f"   - {source}: {count:,}件")
-        
+
         print(f"\n⏱️ 処理時間: {processing_time.total_seconds():.2f}秒")
         print("🎉 統合処理完了!")
     else:
@@ -221,5 +217,4 @@ if __name__ == "__main__":
         if DEBUG:
             import traceback
             traceback.print_exc()
-        sys.exit(1)
         sys.exit(1)
