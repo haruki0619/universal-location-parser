@@ -85,6 +85,13 @@ def find_kml_files(base_dir=DATA_DIR):
         print(f"❌ データディレクトリが存在しません: {base_dir}")
         return []
     files = _glob_exts(base_dir, KML_EXTS)
+
+    # 他形式(JSON/GPX)と同様にデバッグ出力を揃える
+    if DEBUG:
+        print(f"🗺️ {len(files)}個のKML/KMZファイルを発見:")
+        for file in files:
+            print(f"   - {os.path.basename(file)}")
+    
     return files
 
 
